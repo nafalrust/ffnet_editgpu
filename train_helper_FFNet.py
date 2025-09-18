@@ -17,6 +17,31 @@ import utils.log_utils as log_utils
 import wandb
 
 
+def find_latest_checkpoint(checkpoint_dir):
+    """Find the latest checkpoint in the given directory"""
+    if not os.path.exists(checkpoint_dir):
+        return None
+
+    checkpoint_files = []
+    for root, dirs, files in os.walk(checkpoint_dir):
+        for file in files:
+            if file.endswith("_ckpt.tar"):
+                full_path = os.path.join(root, file)
+                # Extract epoch number from filename
+                try:
+                    epoch_num = int(file.split("_")[0])
+                    checkpoint_files.append((epoch_num, full_path))
+                except ValueError:
+                    continue
+
+    if not checkpoint_files:
+        return None
+
+    # Return the path of the checkpoint with the highest epoch number
+    latest_checkpoint = max(checkpoint_files, key=lambda x: x[0])
+    return latest_checkpoint[1]
+
+
 def train_collate(batch):
     transposed_batch = list(zip(*batch))
     images = torch.stack(transposed_batch[0], 0)
@@ -126,6 +151,9 @@ class Trainer(object):
         self.optimizer = optim.AdamW(
             self.model.parameters(), lr=args.lr, weight_decay=args.weight_decay
         )
+        self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
+            self.optimizer, T_max=args.max_epoch, eta_min=args.eta_min
+        )
         self.start_epoch = 0
 
         # check if wandb has to log
@@ -144,9 +172,69 @@ class Trainer(object):
                 self.model.load_state_dict(checkpoint["model_state_dict"])
                 self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
                 self.start_epoch = checkpoint["epoch"] + 1
+
+                # Load scheduler state if available
+                if "scheduler_state_dict" in checkpoint:
+                    self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+                    self.logger.info(f"Loaded scheduler state from checkpoint")
+
+                # Load best metrics if available
+                if "best_mae" in checkpoint:
+                    self.best_mae = checkpoint["best_mae"]
+                    self.logger.info(f"Loaded best MAE: {self.best_mae:.4f}")
+                if "best_mse" in checkpoint:
+                    self.best_mse = checkpoint["best_mse"]
+                    self.logger.info(f"Loaded best MSE: {self.best_mse:.4f}")
+
+                self.logger.info(f"Resuming training from epoch {self.start_epoch}")
+                self.logger.info(
+                    f"Current learning rate: {self.scheduler.get_last_lr()[0]:.2e}"
+                )
             elif suf == "pth":
                 self.model.load_state_dict(
                     torch.load(args.resume, map_location=self.device)
+                )
+                self.logger.info("Loaded model weights only (no training state)")
+        elif args.auto_resume:
+            # Try to find latest checkpoint automatically
+            latest_checkpoint = find_latest_checkpoint(self.save_dir)
+            if latest_checkpoint:
+                self.logger.info(f"Auto-resume: found checkpoint {latest_checkpoint}")
+                try:
+                    checkpoint = torch.load(latest_checkpoint, map_location=self.device)
+                    self.model.load_state_dict(checkpoint["model_state_dict"])
+                    self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+                    self.start_epoch = checkpoint["epoch"] + 1
+
+                    # Load scheduler state if available
+                    if "scheduler_state_dict" in checkpoint:
+                        self.scheduler.load_state_dict(
+                            checkpoint["scheduler_state_dict"]
+                        )
+                        self.logger.info(f"Loaded scheduler state from checkpoint")
+
+                    # Load best metrics if available
+                    if "best_mae" in checkpoint:
+                        self.best_mae = checkpoint["best_mae"]
+                        self.logger.info(f"Loaded best MAE: {self.best_mae:.4f}")
+                    if "best_mse" in checkpoint:
+                        self.best_mse = checkpoint["best_mse"]
+                        self.logger.info(f"Loaded best MSE: {self.best_mse:.4f}")
+
+                    self.logger.info(
+                        f"Auto-resuming training from epoch {self.start_epoch}"
+                    )
+                    self.logger.info(
+                        f"Current learning rate: {self.scheduler.get_last_lr()[0]:.2e}"
+                    )
+                except Exception as e:
+                    self.logger.warning(
+                        f"Failed to load checkpoint {latest_checkpoint}: {e}"
+                    )
+                    self.logger.info("Starting training from scratch")
+            else:
+                self.logger.info(
+                    "Auto-resume: no checkpoint found, starting from scratch"
                 )
         else:
             self.logger.info("random initialization")
@@ -173,10 +261,14 @@ class Trainer(object):
             self.logger.info(
                 "-" * 5 + "Epoch {}/{}".format(epoch, args.max_epoch) + "-" * 5
             )
+            self.logger.info(
+                f"Current learning rate: {self.scheduler.get_last_lr()[0]:.2e}"
+            )
             self.epoch = epoch
             self.train_epoch()
             if epoch % args.val_epoch == 0 and epoch >= args.val_start:
                 self.val_epoch()
+            self.scheduler.step()
 
     def train_epoch(self):
         epoch_ot_loss = AverageMeter()
@@ -281,7 +373,11 @@ class Trainer(object):
             {
                 "epoch": self.epoch,
                 "optimizer_state_dict": self.optimizer.state_dict(),
+                "scheduler_state_dict": self.scheduler.state_dict(),
                 "model_state_dict": model_state_dic,
+                "best_mae": self.best_mae,
+                "best_mse": self.best_mse,
+                "args": self.args,
             },
             save_path,
         )

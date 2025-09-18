@@ -90,6 +90,11 @@ def parse_args():
         type=str,
         help="path ke model checkpoint untuk resume training",
     )
+    parser.add_argument(
+        "--auto-resume",
+        action="store_true",
+        help="otomatis resume dari checkpoint terbaru jika tersedia",
+    )
 
     # Logging
     parser.add_argument(
