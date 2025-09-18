@@ -1,0 +1,23 @@
+2025-09-18 21:04:50,981 - INFO - data_dir       :	D:/00_Haidar_Zufar_Dokumen/coding/hology/Fuss-Free-structure/datasets/full_data/output
+2025-09-18 21:04:50,981 - INFO - dataset        :	custom
+2025-09-18 21:04:50,981 - INFO - arch           :	FFNet
+2025-09-18 21:04:50,981 - INFO - crop_size      :	256
+2025-09-18 21:04:50,981 - INFO - lr             :	1e-05
+2025-09-18 21:04:50,981 - INFO - eta_min        :	1e-06
+2025-09-18 21:04:50,981 - INFO - weight_decay   :	0.0001
+2025-09-18 21:04:50,981 - INFO - batch_size     :	8
+2025-09-18 21:04:50,981 - INFO - max_epoch      :	100
+2025-09-18 21:04:50,981 - INFO - wot            :	0.1
+2025-09-18 21:04:50,981 - INFO - wtv            :	0.01
+2025-09-18 21:04:50,981 - INFO - reg            :	10.0
+2025-09-18 21:04:50,981 - INFO - num_of_iter_in_ot:	100
+2025-09-18 21:04:50,981 - INFO - norm_cood      :	0
+2025-09-18 21:04:50,981 - INFO - val_epoch      :	5
+2025-09-18 21:04:50,981 - INFO - val_start      :	50
+2025-09-18 21:04:50,981 - INFO - num_workers    :	4
+2025-09-18 21:04:50,981 - INFO - device         :	0
+2025-09-18 21:04:50,981 - INFO - cpu            :	True
+2025-09-18 21:04:50,981 - INFO - resume         :	
+2025-09-18 21:04:50,981 - INFO - run_name       :	custom-crowd-counting
+2025-09-18 21:04:50,981 - INFO - wandb          :	0
+2025-09-18 21:04:50,981 - INFO - seed           :	42
