@@ -1,0 +1,13 @@
+-f https://download.pytorch.org/whl/cu113/torch_stable.html
+torch
+torchvision
+torchaudio
+numpy
+scipy
+opencv-python
+gdown
+pillow
+gradio
+timm
+wandb
+matplotlib
