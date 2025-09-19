@@ -168,7 +168,12 @@ class Trainer(object):
             self.logger.info("loading pretrained model from " + args.resume)
             suf = args.resume.rsplit(".", 1)[-1]
             if suf == "tar":
-                checkpoint = torch.load(args.resume, map_location=self.device)
+                try:
+                    checkpoint = torch.load(args.resume, map_location=self.device, weights_only=True)
+                except Exception as e:
+                    print(f"Warning: Loading with weights_only=True failed: {e}")
+                    print("Falling back to weights_only=False...")
+                    checkpoint = torch.load(args.resume, map_location=self.device, weights_only=False)
                 self.model.load_state_dict(checkpoint["model_state_dict"])
                 self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
                 self.start_epoch = checkpoint["epoch"] + 1
@@ -201,7 +206,12 @@ class Trainer(object):
             if latest_checkpoint:
                 self.logger.info(f"Auto-resume: found checkpoint {latest_checkpoint}")
                 try:
-                    checkpoint = torch.load(latest_checkpoint, map_location=self.device)
+                    try:
+                       checkpoint = torch.load(args.resume, map_location=self.device, weights_only=True)
+                    except Exception as e:
+                        print(f"Warning: Loading with weights_only=True failed: {e}")
+                        print("Falling back to weights_only=False...")
+                        checkpoint = torch.load(args.resume, map_location=self.device, weights_only=False)
                     self.model.load_state_dict(checkpoint["model_state_dict"])
                     self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
                     self.start_epoch = checkpoint["epoch"] + 1
@@ -516,3 +526,4 @@ if __name__ == "__main__":
     x = torch.ones(1, 3, 768, 1152)
     y = tensor_spilt(x)
     print(y.size())
+
