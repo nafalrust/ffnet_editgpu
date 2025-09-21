@@ -84,7 +84,7 @@ class Trainer(object):
         if torch.cuda.is_available():
             self.device = torch.device("cuda")
             self.device_count = torch.cuda.device_count()
-            assert self.device_count == 1
+            assert self.device_count == 2
             self.logger.info("using {} gpus".format(self.device_count))
         else:
             self.device = torch.device("cpu")
